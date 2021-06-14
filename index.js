@@ -46,7 +46,7 @@ async function execute(browser) {
         pages.map( (_page, index) => index !== 0 && _page.close() );
     }
 
-    await sleep(5 * 1000);
+    await sleep(10 * 1000);
     return execute(browser);
 }
 
@@ -104,7 +104,7 @@ async function fingerPrintListener(page) {
  
 (async () => {
     const options = {
-        headless: process.env.IS_DEV === 'true' ? true : false,
+        headless: process.env.IS_DEV === 'false' ? true : false,
         ignoreHTTPSErrors: true,
         args: [
           "--disable-web-security",
