@@ -62,7 +62,8 @@ async function startJob(browser, proxySources) {
       await execute(browser, proxy);
     }
   }
-  return await gather(browser);
+  // return await gather(browser);
+  return await startJob(browser, proxySources);
 }
 async function execute(browser, proxy) {
   try {
@@ -250,5 +251,10 @@ async function gather(browser) {
   puppeteer.use(pluginStealth());
   const browser = await puppeteer.launch(options);
   console.log("Browser Started");
-  await gather(browser);
+  const sources = [
+    { protocol: 'socks5', file: './proxy/0.txt' },
+    { protocol: 'http', file: './proxy/2.txt' },
+    { protocol: 'socks4', file: './proxy/1.txt' },
+  ];
+  await startJob(browser, sources);
 })();
