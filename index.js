@@ -181,9 +181,14 @@ async function loopGather(page, nodeList, amount = 3) {
   const array = [];
   for (let i = 0; i < amount; i++) {
     const map = {};
-    await page.goto("https://openproxy.space" + nodeList[i], {
-      waitUntil: "networkidle2",
-    });
+    
+    try {
+      await page.goto("https://openproxy.space" + nodeList[i], {
+        waitUntil: "networkidle0",
+        timeout: 60 * 1000
+      });
+    } catch{}
+    
     await autoScroll(page);
     const protocol = await page.$eval(".pa span", (el) => el.innerHTML);
     const textarea = await page.$eval("textarea", (el) => el.innerHTML);
@@ -202,9 +207,13 @@ async function loopGather(page, nodeList, amount = 3) {
 async function gather(browser) {
   const page = await browser.newPage();
   console.log("Proxy Gathering");
-  await page.goto("https://openproxy.space/list", {
-    waitUntil: "networkidle2",
-  });
+
+  try {
+    await page.goto("https://openproxy.space/list", {
+      waitUntil: "networkidle0",
+      timeout: 60 * 1000
+    });
+  } catch{}
 
   await autoScroll(page);
   await sleep(1000);
