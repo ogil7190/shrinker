@@ -4,6 +4,9 @@ const puppeteer = require("puppeteer-extra");
 const pluginStealth = require("puppeteer-extra-plugin-stealth");
 const { sleep, randomBtwn, randomSizeStringWithCustomPossibles } = require("./utils");
 const UserAgent = require('user-agents');
+const useProxy = require('puppeteer-page-proxy');
+const fs = require('fs');
+const readline = require('readline');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -13,17 +16,33 @@ app.use(router);
 app.listen(PORT);
 
 const LINK = process.env.LINK || 'http://fumacrom.com/nsto';
-async function execute(browser) {
-    const page = await browser.newPage();
 
-    const userAgent = new UserAgent();
-    await page.setUserAgent(userAgent.toString());
-    await page.setExtraHTTPHeaders({ referer: 'https://www.facebook.com/' });
-    await fingerPrintListener(page);
-
+async function startJob(browser, proxySources){
+    for(let i=0; i<proxySources.length; i++){
+        const fileStream = fs.createReadStream(proxySources[i].file);
+        const protocol = proxySources[i].protocol === 'socks4' ? 'sock' : proxySources[i].protocol;
+        const rl = readline.createInterface({
+            input: fileStream,
+            crlfDelay: Infinity
+        });
+        for await (const line of rl) {
+            const proxy = `${protocol}://${line}`
+            await execute(browser, proxy);
+        }
+    }
+    return await gather(browser);
+}
+async function execute(browser, proxy) {
     try {
+        const page = await browser.newPage();
+        const userAgent = new UserAgent();
+        await page.setUserAgent(userAgent.toString());
+        await page.setExtraHTTPHeaders({ referer: 'https://www.facebook.com/' });
+        await fingerPrintListener(page);
         await sleep(500);
-        await page.goto(LINK, { waitUntil: "networkidle2" });
+
+        await useProxy(page, proxy);
+        await page.goto(LINK, { waitUntil: "networkidle2", timeout: 60 * 1000 });
         await sleep( randomBtwn(8 * 1000, 10 * 1000) );
         
         const haveShrinkBtn = await page.$$('#shrink_submit');
@@ -47,7 +66,6 @@ async function execute(browser) {
     }
 
     await sleep(10 * 1000);
-    return execute(browser);
 }
 
 async function fingerPrintListener(page) {
@@ -101,6 +119,64 @@ async function fingerPrintListener(page) {
         };
     }, str);
 }
+
+async function autoScroll(page){
+    await page.evaluate(async () => {
+        await new Promise((resolve, reject) => {
+            var totalHeight = 0;
+            var distance = 100;
+            var timer = setInterval(() => {
+                var scrollHeight = document.body.scrollHeight;
+                window.scrollBy(0, distance);
+                totalHeight += distance;
+
+                if(totalHeight >= scrollHeight){
+                    clearInterval(timer);
+                    resolve();
+                }
+            }, 50);
+        });
+    });
+}
+
+async function loopGather(page, nodeList, amount = 3) {
+    const array = [];
+    for(let i=0; i<amount; i++){
+        const map = {};
+        await page.goto( 'https://openproxy.space' + nodeList[i], { waitUntil: "networkidle2" })
+        await autoScroll(page);
+        const protocol = await page.$eval(".pa span", el => el.innerHTML);
+        const textarea = await page.$eval("textarea", el => el.innerHTML);
+        
+        if(textarea){
+            const fileLoc = `./proxy/${i}.txt`;
+            fs.writeFileSync(fileLoc, textarea);
+            map.protocol = protocol;
+            map.file = fileLoc;
+            array.push(map);
+        }
+    }
+    return array;
+}
+
+async function gather(browser) {
+    const page = await browser.newPage();
+    await page.goto('https://openproxy.space/list', { waitUntil: "networkidle2" });
+    
+    await autoScroll(page);
+    await sleep(500);
+    const tabs = await page.$$eval("a.list", el => el.map(x => x.getAttribute("href")));
+    
+    if( tabs.length > 0 ) {
+        if(!fs.existsSync('./proxy')){
+            fs.mkdirSync('./proxy');
+        }
+        const array = await loopGather(page, tabs);
+        console.log( 'array', array );
+        await startJob(browser, array);
+    }
+    page.close();
+}
  
 (async () => {
     const options = {
@@ -118,5 +194,5 @@ async function fingerPrintListener(page) {
       };
     puppeteer.use(pluginStealth());
     const browser = await puppeteer.launch(options);
-    await execute(browser);
+    await gather(browser);
 })()
