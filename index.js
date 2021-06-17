@@ -74,22 +74,29 @@ async function execute(browser, proxy) {
     await fingerPrintListener(page);
     await sleep(500);
 
-    await useProxy(page, proxy);
-    await page.goto(LINK, { waitUntil: "networkidle2", timeout: 60 * 1000 });
-    await sleep(randomBtwn(8 * 1000, 10 * 1000));
+    try {
+      await useProxy(page, proxy);
+      await page.goto(LINK, { waitUntil: "networkidle2", timeout: 60 * 1000 });
+      await sleep(randomBtwn(4 * 1000, 6 * 1000));
+    } catch{}
 
     await page.screenshot({ path: "temp/ss.png", fullPage: true });
-    const haveShrinkBtn = await page.$$("#shrink_submit");
-    if (haveShrinkBtn.length > 0) {
-      console.log("NO AD, we are blocked");
-    }
-    await page.evaluate(() => {
+    // const haveShrinkBtn = await page.$$("#shrink_submit");
+    // if (haveShrinkBtn.length > 0) {
+    //   console.log("NO AD, we are blocked");
+    // }
+    const shouldWait = await page.evaluate(() => {
       const element = document.getElementById("skip_bu2tton");
       if (element) {
         element.click();
+        return true;
       }
+      return false;
     });
-    await sleep(10 * 1000);
+    
+    if(shouldWait) {
+      await sleep(15 * 1000);
+    }
   } catch {
     console.log("error");
   }
@@ -256,5 +263,6 @@ async function gather(browser) {
     { protocol: 'http', file: './proxy/2.txt' },
     { protocol: 'socks4', file: './proxy/1.txt' },
   ];
+  // await gather(browser);
   await startJob(browser, sources);
 })();
