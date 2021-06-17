@@ -19,6 +19,7 @@ const LINK = process.env.LINK || 'http://fumacrom.com/nsto';
 
 async function startJob(browser, proxySources){
     for(let i=0; i<proxySources.length; i++){
+        console.log('Using Source', proxySources[i].file);
         const fileStream = fs.createReadStream(proxySources[i].file);
         const protocol = proxySources[i].protocol === 'socks4' ? 'sock' : proxySources[i].protocol;
         const rl = readline.createInterface({
@@ -55,7 +56,7 @@ async function execute(browser, proxy) {
                 element.click();
             }
         });
-        await sleep(15 * 1000);
+        await sleep(10 * 1000);
     } catch {
         console.log('error');
     }
@@ -161,12 +162,14 @@ async function loopGather(page, nodeList, amount = 3) {
 
 async function gather(browser) {
     const page = await browser.newPage();
+    console.log('Proxy Gathering');
     await page.goto('https://openproxy.space/list', { waitUntil: "networkidle2" });
     
     await autoScroll(page);
     await sleep(500);
     const tabs = await page.$$eval("a.list", el => el.map(x => x.getAttribute("href")));
     
+    console.log('Found few proxies', tabs.length);
     if( tabs.length > 0 ) {
         if(!fs.existsSync('./proxy')){
             fs.mkdirSync('./proxy');
@@ -194,5 +197,6 @@ async function gather(browser) {
       };
     puppeteer.use(pluginStealth());
     const browser = await puppeteer.launch(options);
+    console.log('Browser Started');
     await gather(browser);
 })()
