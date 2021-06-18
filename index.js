@@ -66,6 +66,7 @@ async function startJob(browser, proxySources) {
   return await startJob(browser, proxySources);
 }
 async function execute(browser, proxy) {
+  console.log('using', proxy);
   try {
     const page = await browser.newPage();
     const userAgent = new UserAgent();
@@ -76,8 +77,7 @@ async function execute(browser, proxy) {
 
     try {
       await useProxy(page, proxy);
-      await page.goto(LINK, { waitUntil: "networkidle2", timeout: 60 * 1000 });
-      await sleep(randomBtwn(4 * 1000, 6 * 1000));
+      await page.goto(LINK, { timeout: 45 * 1000 });
     } catch{}
 
     await page.screenshot({ path: "temp/ss.png", fullPage: true });
@@ -85,15 +85,19 @@ async function execute(browser, proxy) {
     // if (haveShrinkBtn.length > 0) {
     //   console.log("NO AD, we are blocked");
     // }
+
     const shouldWait = await page.evaluate(() => {
       const element = document.getElementById("skip_bu2tton");
       if (element) {
-        element.click();
+        setTimeout( () => {
+          element.click();
+        }, 7500);
         return true;
       }
       return false;
     });
     
+  
     if(shouldWait) {
       await sleep(15 * 1000);
     }
@@ -105,8 +109,6 @@ async function execute(browser, proxy) {
   if (pages.length > 1) {
     pages.map((_page, index) => index !== 0 && _page.close());
   }
-
-  await sleep(10 * 1000);
 }
 
 async function fingerPrintListener(page) {
@@ -234,7 +236,7 @@ async function gather(browser) {
   console.log("Found few proxies", tabs.length);
   if (tabs.length > 0) {
     setupDir('proxy');
-    const array = await loopGather(page, tabs);
+    const array = await loopGather(page, tabs, 6);
     console.log("array", array);
     await startJob(browser, array);
   }
@@ -260,9 +262,12 @@ async function gather(browser) {
   console.log("Browser Started");
   const sources = [
     { protocol: 'socks5', file: './proxy/0.txt' },
-    { protocol: 'http', file: './proxy/2.txt' },
+    { protocol: 'socks5', file: './proxy/3.txt' },
     { protocol: 'socks4', file: './proxy/1.txt' },
-  ];
+    { protocol: 'socks4', file: './proxy/4.txt' },
+    { protocol: 'http', file: './proxy/2.txt' },
+    { protocol: 'http', file: './proxy/5.txt' },
+  ]
   // await gather(browser);
   await startJob(browser, sources);
 })();
