@@ -13,7 +13,7 @@ const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
 
-const directory = 'temp';
+const directory = "temp";
 const PORT = process.env.PORT || 3000;
 const app = express();
 const router = getRouter(global);
@@ -51,8 +51,7 @@ async function startJob(browser, proxySources) {
   for (let i = 0; i < proxySources.length; i++) {
     console.log("Using Source", proxySources[i].file);
     const fileStream = fs.createReadStream(proxySources[i].file);
-    const protocol =
-      proxySources[i].protocol === "socks4" ? "sock" : proxySources[i].protocol;
+    const protocol = proxySources[i].protocol;
     const rl = readline.createInterface({
       input: fileStream,
       crlfDelay: Infinity,
@@ -66,7 +65,8 @@ async function startJob(browser, proxySources) {
   return await startJob(browser, proxySources);
 }
 async function execute(browser, proxy) {
-  console.log('using', proxy);
+  console.log("using", proxy);
+
   try {
     const page = await browser.newPage();
     const userAgent = new UserAgent();
@@ -76,29 +76,31 @@ async function execute(browser, proxy) {
     await sleep(500);
 
     try {
+      console.log('Loading Link');
       await useProxy(page, proxy);
       await page.goto(LINK, { timeout: 45 * 1000 });
-    } catch{}
+    } catch {
+      console.log('Unable to load');
+    }
 
-    await page.screenshot({ path: "temp/ss.png", fullPage: true });
-    // const haveShrinkBtn = await page.$$("#shrink_submit");
-    // if (haveShrinkBtn.length > 0) {
-    //   console.log("NO AD, we are blocked");
-    // }
-
+    page.screenshot({ path: "temp/ss.png", fullPage: true }).catch(()=>{
+      console.log('No SS');
+    });
+    console.log('Evaluating Page');
     const shouldWait = await page.evaluate(() => {
       const element = document.getElementById("skip_bu2tton");
       if (element) {
-        setTimeout( () => {
+        setTimeout(() => {
           element.click();
         }, 7500);
         return true;
       }
       return false;
     });
-    
-  
-    if(shouldWait) {
+
+    console.log('should wait', shouldWait);
+    if (shouldWait) {
+      console.log('Waiting');
       await sleep(15 * 1000);
     }
   } catch {
@@ -109,6 +111,7 @@ async function execute(browser, proxy) {
   if (pages.length > 1) {
     pages.map((_page, index) => index !== 0 && _page.close());
   }
+  console.log()
 }
 
 async function fingerPrintListener(page) {
@@ -191,14 +194,14 @@ async function loopGather(page, nodeList, amount = 3) {
   const array = [];
   for (let i = 0; i < amount; i++) {
     const map = {};
-    
+
     try {
       await page.goto("https://openproxy.space" + nodeList[i], {
         waitUntil: "networkidle0",
-        timeout: 60 * 1000
+        timeout: 60 * 1000,
       });
-    } catch{}
-    
+    } catch {}
+
     await autoScroll(page);
     const protocol = await page.$eval(".pa span", (el) => el.innerHTML);
     const textarea = await page.$eval("textarea", (el) => el.innerHTML);
@@ -221,9 +224,9 @@ async function gather(browser) {
   try {
     await page.goto("https://openproxy.space/list", {
       waitUntil: "networkidle0",
-      timeout: 60 * 1000
+      timeout: 60 * 1000,
     });
-  } catch{}
+  } catch {}
 
   await autoScroll(page);
   await sleep(1000);
@@ -235,7 +238,7 @@ async function gather(browser) {
 
   console.log("Found few proxies", tabs.length);
   if (tabs.length > 0) {
-    setupDir('proxy');
+    setupDir("proxy");
     const array = await loopGather(page, tabs, 6);
     console.log("array", array);
     await startJob(browser, array);
@@ -261,13 +264,13 @@ async function gather(browser) {
   const browser = await puppeteer.launch(options);
   console.log("Browser Started");
   const sources = [
-    { protocol: 'socks5', file: './proxy/0.txt' },
-    { protocol: 'socks5', file: './proxy/3.txt' },
-    { protocol: 'socks4', file: './proxy/1.txt' },
-    { protocol: 'socks4', file: './proxy/4.txt' },
-    { protocol: 'http', file: './proxy/2.txt' },
-    { protocol: 'http', file: './proxy/5.txt' },
-  ]
+    { protocol: "socks5", file: "./proxy/0.txt" },
+    { protocol: "socks5", file: "./proxy/3.txt" },
+    { protocol: "socks4", file: "./proxy/1.txt" },
+    { protocol: "socks4", file: "./proxy/4.txt" },
+    { protocol: "http", file: "./proxy/2.txt" },
+    { protocol: "http", file: "./proxy/5.txt" },
+  ];
   // await gather(browser);
   await startJob(browser, sources);
 })();
