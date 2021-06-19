@@ -43,7 +43,10 @@ function setupDir(directory) {
 
 const LINK = process.env.LINK || "http://fumacrom.com/nsto";
 
-async function startJob(browser, proxySources, isShort) {
+async function startJob(browser, proxySources) {
+  const global = {
+    ourCount: 0
+  };
   for (let i = 0; i < proxySources.length; i++) {
     console.log("Using Source", proxySources[i].file);
     const fileStream = fs.createReadStream(proxySources[i].file);
@@ -53,27 +56,41 @@ async function startJob(browser, proxySources, isShort) {
       crlfDelay: Infinity,
     });
     for await (const line of rl) {
-      const proxy = isShort ? line : `${protocol}://${line}`;
-      await execute(browser, proxy, isShort);
+      const proxy = `${protocol}://${line}`;
+      await execute(browser, proxy, global);
     }
   }
   // return await gather(browser);
   return await startJob(browser, proxySources);
 }
 
-const getCustomReferer = ( proxy ) => {
-  return proxy.split('://')[1].split('.').join('').replace(':', '_') || '123';
+const getCustomReferer = (proxy) => {
+  return process.env.IS_DEV === "false"
+    ? "https://youtube.com"
+    : "https://m.facebook.com/";
+};
+
+async function blockExtraRequests(page) {
+  await page.setRequestInterception(true);
+  page.on("request", (req) => {
+    if (req.resourceType() === 'stylesheet' || req.resourceType() === 'font' || req.resourceType() === "image") {
+      req.abort();
+    } else {
+      req.continue();
+    }
+  });
 }
 
-async function execute(browser, proxy, isShort) {
-  console.log("using", proxy);
+async function execute(browser, proxy, global) {
+  console.log("using", proxy, ' Our Count', global.ourCount );
   let timer;
+  const context = await browser.createIncognitoBrowserContext();
   try {
-    const page = await browser.newPage();
-    const FORCE_CLOSE_TIME = isShort ? 75 * 1000 : 2 * 60 * 1000;
+    const page = await context.newPage();
+    const FORCE_CLOSE_TIME = 2 * 60 * 1000;
     const PAGE_TIMEOUT = 60 * 1000;
-    const WAIT_BUTTON_CLICK = isShort ? 2000 : 7500;
-    const AFTER_CLICK_TIME = isShort ? 2000 : 15 * 1000;
+    const WAIT_BUTTON_CLICK = 7500;
+    const AFTER_CLICK_TIME = 7500;
 
     timer = setTimeout(() => {
       console.log("Force Closing");
@@ -82,8 +99,9 @@ async function execute(browser, proxy, isShort) {
 
     const userAgent = new UserAgent();
     await page.setUserAgent(userAgent.toString());
-    await page.setExtraHTTPHeaders({ referer: `https://www.facebook.com/?rp=${getCustomReferer(proxy)}` });
+    await page.setExtraHTTPHeaders({ referer: getCustomReferer(proxy) });
     await fingerPrintListener(page);
+    await blockExtraRequests(page);
     await sleep(500);
 
     try {
@@ -94,6 +112,12 @@ async function execute(browser, proxy, isShort) {
       console.log("Unable to load");
     }
 
+    const { cookies } = await page._client.send('Network.getAllCookies');
+    console.log(cookies.length);
+    
+    if(cookies.length > 7){
+      global.ourCount += 1; 
+    }
     page.screenshot({ path: "temp/ss.png", fullPage: true }).catch(() => {
       console.log("No SS");
     });
@@ -120,10 +144,11 @@ async function execute(browser, proxy, isShort) {
     console.log("error");
   }
 
-  const pages = await browser.pages();
-  if (pages.length > 1) {
-    pages.map((_page, index) => index !== 0 && _page.close());
-  }
+  // const pages = await browser.pages();
+  // if (pages.length > 1) {
+  //   pages.map((_page, index) => index !== 0 && _page.close());
+  // }
+  await context.close();
   console.log();
 }
 
@@ -277,27 +302,20 @@ async function gather(browser) {
   const browser = await puppeteer.launch(options);
   console.log("Browser Started");
 
-  let sources, isShort;
-  if( process.env.SHORT ) {
-    sources = [
-      { file: "./verified/unique.txt" },
-    ];
-    isShort = true;
-  } else {
-    isShort = false;
-    sources = [
-      { protocol: "socks5", file: "./proxy/0.txt" },
-      { protocol: "socks5", file: "./proxy/3.txt" },
-      { protocol: "socks5", file: "./proxy/6.txt" },
-      { protocol: "socks4", file: "./proxy/1.txt" },
-      { protocol: "socks4", file: "./proxy/4.txt" },
-      { protocol: "socks4", file: "./proxy/7.txt" },
-      { protocol: "http", file: "./proxy/2.txt" },
-      { protocol: "http", file: "./proxy/5.txt" },
-      { protocol: "http", file: "./proxy/8.txt" },
-    ];
-  }
+  sources = [
+    { protocol: "socks5", file: "./proxy/-2.txt" },
+    { protocol: "socks4", file: "./proxy/-1.txt" },
+    { protocol: "socks5", file: "./proxy/0.txt" },
+    { protocol: "socks5", file: "./proxy/3.txt" },
+    { protocol: "socks5", file: "./proxy/6.txt" },
+    { protocol: "socks4", file: "./proxy/1.txt" },
+    { protocol: "socks4", file: "./proxy/4.txt" },
+    { protocol: "socks4", file: "./proxy/7.txt" },
+    { protocol: "http", file: "./proxy/2.txt" },
+    { protocol: "http", file: "./proxy/5.txt" },
+    { protocol: "http", file: "./proxy/8.txt" },
+  ];
 
   // await gather(browser);
-  await startJob(browser, sources, isShort);
+  await startJob(browser, sources);
 })();
