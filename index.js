@@ -43,7 +43,7 @@ function setupDir(directory) {
 
 const LINK = process.env.LINK || "http://fumacrom.com/nsto";
 
-async function startJob(browser, proxySources) {
+async function startJob(browser, proxySources, isShort) {
   for (let i = 0; i < proxySources.length; i++) {
     console.log("Using Source", proxySources[i].file);
     const fileStream = fs.createReadStream(proxySources[i].file);
@@ -53,34 +53,43 @@ async function startJob(browser, proxySources) {
       crlfDelay: Infinity,
     });
     for await (const line of rl) {
-      const proxy = `${protocol}://${line}`;
-      await execute(browser, proxy);
+      const proxy = isShort ? line : `${protocol}://${line}`;
+      await execute(browser, proxy, isShort);
     }
   }
   // return await gather(browser);
   return await startJob(browser, proxySources);
 }
-async function execute(browser, proxy) {
+
+const getCustomReferer = ( proxy ) => {
+  return proxy.split('://')[1].split('.').join('').replace(':', '_') || '123';
+}
+
+async function execute(browser, proxy, isShort) {
   console.log("using", proxy);
   let timer;
   try {
     const page = await browser.newPage();
+    const FORCE_CLOSE_TIME = isShort ? 60 * 1000 : 2 * 60 * 1000;
+    const PAGE_TIMEOUT = isShort ? 30 * 1000 : 45 * 1000;
+    const WAIT_BUTTON_CLICK = isShort ? 0 : 7500;
+    const AFTER_CLICK_TIME = isShort ? 3000 : 15 * 1000;
 
     timer = setTimeout(() => {
       console.log("Force Closing");
       page.close();
-    }, 2 * 60 * 1000);
+    }, FORCE_CLOSE_TIME);
 
     const userAgent = new UserAgent();
     await page.setUserAgent(userAgent.toString());
-    await page.setExtraHTTPHeaders({ referer: "https://www.facebook.com/" });
+    await page.setExtraHTTPHeaders({ referer: `https://www.facebook.com/?rp=${getCustomReferer(proxy)}` });
     await fingerPrintListener(page);
     await sleep(500);
 
     try {
       console.log("Loading Link");
       await useProxy(page, proxy);
-      await page.goto(LINK, { timeout: 45 * 1000 });
+      await page.goto(LINK, { timeout: PAGE_TIMEOUT });
     } catch {
       console.log("Unable to load");
     }
@@ -94,7 +103,7 @@ async function execute(browser, proxy) {
       if (element) {
         setTimeout(() => {
           element.click();
-        }, 7500);
+        }, WAIT_BUTTON_CLICK);
         return true;
       }
       return false;
@@ -104,7 +113,7 @@ async function execute(browser, proxy) {
     clearTimeout(timer);
     if (shouldWait) {
       console.log("Waiting");
-      await sleep(15 * 1000);
+      await sleep(AFTER_CLICK_TIME);
     }
   } catch {
     clearTimeout(timer);
@@ -267,17 +276,28 @@ async function gather(browser) {
   puppeteer.use(pluginStealth());
   const browser = await puppeteer.launch(options);
   console.log("Browser Started");
-  const sources = [
-    { protocol: "socks5", file: "./proxy/0.txt" },
-    { protocol: "socks5", file: "./proxy/3.txt" },
-    { protocol: "socks5", file: "./proxy/6.txt" },
-    { protocol: "socks4", file: "./proxy/1.txt" },
-    { protocol: "socks4", file: "./proxy/4.txt" },
-    { protocol: "socks4", file: "./proxy/7.txt" },
-    { protocol: "http", file: "./proxy/2.txt" },
-    { protocol: "http", file: "./proxy/5.txt" },
-    { protocol: "http", file: "./proxy/8.txt" },
-  ];
+
+  let sources, isShort;
+  if( process.env.SHORT ) {
+    sources = [
+      { file: "./verified/unique.txt" },
+    ];
+    isShort = true;
+  } else {
+    isShort = false;
+    sources = [
+      { protocol: "socks5", file: "./proxy/0.txt" },
+      { protocol: "socks5", file: "./proxy/3.txt" },
+      { protocol: "socks5", file: "./proxy/6.txt" },
+      { protocol: "socks4", file: "./proxy/1.txt" },
+      { protocol: "socks4", file: "./proxy/4.txt" },
+      { protocol: "socks4", file: "./proxy/7.txt" },
+      { protocol: "http", file: "./proxy/2.txt" },
+      { protocol: "http", file: "./proxy/5.txt" },
+      { protocol: "http", file: "./proxy/8.txt" },
+    ];
+  }
+
   // await gather(browser);
-  await startJob(browser, sources);
+  await startJob(browser, sources, isShort);
 })();
