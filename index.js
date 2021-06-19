@@ -69,7 +69,7 @@ async function execute(browser, proxy) {
     const timer = setTimeout(() => {
       console.log("Force Closing");
       page.close();
-    }, 60 * 1000);
+    }, 2 * 60 * 1000);
 
     const userAgent = new UserAgent();
     await page.setUserAgent(userAgent.toString());
