@@ -70,10 +70,10 @@ async function execute(browser, proxy, isShort) {
   let timer;
   try {
     const page = await browser.newPage();
-    const FORCE_CLOSE_TIME = isShort ? 60 * 1000 : 2 * 60 * 1000;
-    const PAGE_TIMEOUT = isShort ? 30 * 1000 : 45 * 1000;
-    const WAIT_BUTTON_CLICK = isShort ? 0 : 7500;
-    const AFTER_CLICK_TIME = isShort ? 3000 : 15 * 1000;
+    const FORCE_CLOSE_TIME = isShort ? 75 * 1000 : 2 * 60 * 1000;
+    const PAGE_TIMEOUT = 60 * 1000;
+    const WAIT_BUTTON_CLICK = isShort ? 2000 : 7500;
+    const AFTER_CLICK_TIME = isShort ? 2000 : 15 * 1000;
 
     timer = setTimeout(() => {
       console.log("Force Closing");
