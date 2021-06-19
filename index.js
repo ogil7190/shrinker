@@ -62,11 +62,11 @@ async function startJob(browser, proxySources) {
 }
 async function execute(browser, proxy) {
   console.log("using", proxy);
-
+  let timer;
   try {
     const page = await browser.newPage();
 
-    const timer = setTimeout(() => {
+    timer = setTimeout(() => {
       console.log("Force Closing");
       page.close();
     }, 2 * 60 * 1000);
@@ -107,6 +107,7 @@ async function execute(browser, proxy) {
       await sleep(15 * 1000);
     }
   } catch {
+    clearTimeout(timer);
     console.log("error");
   }
 
