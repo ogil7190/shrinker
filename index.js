@@ -2,11 +2,7 @@ const express = require("express");
 const { getRouter } = require("./router");
 const puppeteer = require("puppeteer-extra");
 const pluginStealth = require("puppeteer-extra-plugin-stealth");
-const {
-  sleep,
-  randomBtwn,
-  randomSizeStringWithCustomPossibles,
-} = require("./utils");
+const { sleep, randomSizeStringWithCustomPossibles } = require("./utils");
 const UserAgent = require("user-agents");
 const useProxy = require("puppeteer-page-proxy");
 const fs = require("fs");
@@ -69,6 +65,12 @@ async function execute(browser, proxy) {
 
   try {
     const page = await browser.newPage();
+
+    const timer = setTimeout(() => {
+      console.log("Force Closing");
+      page.close();
+    }, 60 * 1000);
+
     const userAgent = new UserAgent();
     await page.setUserAgent(userAgent.toString());
     await page.setExtraHTTPHeaders({ referer: "https://www.facebook.com/" });
@@ -76,17 +78,17 @@ async function execute(browser, proxy) {
     await sleep(500);
 
     try {
-      console.log('Loading Link');
+      console.log("Loading Link");
       await useProxy(page, proxy);
       await page.goto(LINK, { timeout: 45 * 1000 });
     } catch {
-      console.log('Unable to load');
+      console.log("Unable to load");
     }
 
-    page.screenshot({ path: "temp/ss.png", fullPage: true }).catch(()=>{
-      console.log('No SS');
+    page.screenshot({ path: "temp/ss.png", fullPage: true }).catch(() => {
+      console.log("No SS");
     });
-    console.log('Evaluating Page');
+    console.log("Evaluating Page");
     const shouldWait = await page.evaluate(() => {
       const element = document.getElementById("skip_bu2tton");
       if (element) {
@@ -98,9 +100,10 @@ async function execute(browser, proxy) {
       return false;
     });
 
-    console.log('should wait', shouldWait);
+    console.log("should wait", shouldWait);
+    clearTimeout(timer);
     if (shouldWait) {
-      console.log('Waiting');
+      console.log("Waiting");
       await sleep(15 * 1000);
     }
   } catch {
@@ -111,7 +114,7 @@ async function execute(browser, proxy) {
   if (pages.length > 1) {
     pages.map((_page, index) => index !== 0 && _page.close());
   }
-  console.log()
+  console.log();
 }
 
 async function fingerPrintListener(page) {
@@ -239,7 +242,7 @@ async function gather(browser) {
   console.log("Found few proxies", tabs.length);
   if (tabs.length > 0) {
     setupDir("proxy");
-    const array = await loopGather(page, tabs, 6);
+    const array = await loopGather(page, tabs, 9);
     console.log("array", array);
     await startJob(browser, array);
   }
@@ -266,10 +269,13 @@ async function gather(browser) {
   const sources = [
     { protocol: "socks5", file: "./proxy/0.txt" },
     { protocol: "socks5", file: "./proxy/3.txt" },
+    { protocol: "socks5", file: "./proxy/6.txt" },
     { protocol: "socks4", file: "./proxy/1.txt" },
     { protocol: "socks4", file: "./proxy/4.txt" },
+    { protocol: "socks4", file: "./proxy/7.txt" },
     { protocol: "http", file: "./proxy/2.txt" },
     { protocol: "http", file: "./proxy/5.txt" },
+    { protocol: "http", file: "./proxy/8.txt" },
   ];
   // await gather(browser);
   await startJob(browser, sources);
