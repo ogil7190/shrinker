@@ -45,7 +45,7 @@ const LINK = process.env.LINK || "http://fumacrom.com/nsto";
 
 async function startJob(browser, proxySources) {
   const global = {
-    ourCount: 0
+    ourCount: 0,
   };
   for (let i = 0; i < proxySources.length; i++) {
     console.log("Using Source", proxySources[i].file);
@@ -73,7 +73,11 @@ const getCustomReferer = (proxy) => {
 async function blockExtraRequests(page) {
   await page.setRequestInterception(true);
   page.on("request", (req) => {
-    if (req.resourceType() === 'stylesheet' || req.resourceType() === 'font' || req.resourceType() === "image") {
+    if (
+      req.resourceType() === "stylesheet" ||
+      req.resourceType() === "font" ||
+      req.resourceType() === "image"
+    ) {
       req.abort();
     } else {
       req.continue();
@@ -82,7 +86,7 @@ async function blockExtraRequests(page) {
 }
 
 async function execute(browser, proxy, global) {
-  console.log("using", proxy, ' Our Count', global.ourCount );
+  console.log("using", proxy, " Our Count", global.ourCount);
   let timer;
   const context = await browser.createIncognitoBrowserContext();
   try {
@@ -112,11 +116,12 @@ async function execute(browser, proxy, global) {
       console.log("Unable to load");
     }
 
-    const { cookies } = await page._client.send('Network.getAllCookies');
+    const { cookies } = await page._client.send("Network.getAllCookies");
     console.log(cookies.length);
-    
-    if(cookies.length > 7){
-      global.ourCount += 1; 
+
+    if (cookies.length >= 7) {
+      await sleep(5000);
+      global.ourCount += 1;
     }
     page.screenshot({ path: "temp/ss.png", fullPage: true }).catch(() => {
       console.log("No SS");
@@ -303,16 +308,14 @@ async function gather(browser) {
   console.log("Browser Started");
 
   sources = [
-    { protocol: "socks5", file: "./proxy/-2.txt" },
-    { protocol: "socks4", file: "./proxy/-1.txt" },
     { protocol: "socks5", file: "./proxy/0.txt" },
-    { protocol: "socks5", file: "./proxy/3.txt" },
-    { protocol: "socks5", file: "./proxy/6.txt" },
     { protocol: "socks4", file: "./proxy/1.txt" },
-    { protocol: "socks4", file: "./proxy/4.txt" },
-    { protocol: "socks4", file: "./proxy/7.txt" },
     { protocol: "http", file: "./proxy/2.txt" },
+    { protocol: "socks5", file: "./proxy/3.txt" },
+    { protocol: "socks4", file: "./proxy/4.txt" },
     { protocol: "http", file: "./proxy/5.txt" },
+    { protocol: "socks5", file: "./proxy/6.txt" },
+    { protocol: "socks4", file: "./proxy/7.txt" },
     { protocol: "http", file: "./proxy/8.txt" },
   ];
 
