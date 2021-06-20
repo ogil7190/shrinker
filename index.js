@@ -65,16 +65,16 @@ async function startJob(browser, proxySources) {
 }
 
 const getCustomReferer = (proxy) => {
+  const prefix = proxy.split("://")[1].split('.').join('').replace(':', '-');
   return process.env.IS_DEV === "false"
-    ? "https://youtube.com"
-    : "https://m.facebook.com/";
+    ? `https://${prefix}.youtube.com`
+    : `https://${prefix}.facebook.com`;
 };
 
 async function blockExtraRequests(page) {
   await page.setRequestInterception(true);
   page.on("request", (req) => {
     if (
-      req.resourceType() === "stylesheet" ||
       req.resourceType() === "font" ||
       req.resourceType() === "image"
     ) {
@@ -93,7 +93,6 @@ async function execute(browser, proxy, global) {
     const page = await context.newPage();
     const FORCE_CLOSE_TIME = 2 * 60 * 1000;
     const PAGE_TIMEOUT = 60 * 1000;
-    const WAIT_BUTTON_CLICK = 7500;
     const AFTER_CLICK_TIME = 7500;
 
     timer = setTimeout(() => {
@@ -117,12 +116,12 @@ async function execute(browser, proxy, global) {
     }
 
     const { cookies } = await page._client.send("Network.getAllCookies");
-    console.log(cookies.length);
 
     if (cookies.length >= 7) {
-      await sleep(5000);
       global.ourCount += 1;
+      await sleep(7000);
     }
+
     page.screenshot({ path: "temp/ss.png", fullPage: true }).catch(() => {
       console.log("No SS");
     });
@@ -132,7 +131,7 @@ async function execute(browser, proxy, global) {
       if (element) {
         setTimeout(() => {
           element.click();
-        }, WAIT_BUTTON_CLICK);
+        }, 3000);
         return true;
       }
       return false;
