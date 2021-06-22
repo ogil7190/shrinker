@@ -307,17 +307,17 @@ async function gather(browser) {
   console.log("Browser Started");
 
   sources = [
-    { protocol: "socks5", file: "./proxy/0.txt" },
-    { protocol: "socks4", file: "./proxy/1.txt" },
-    { protocol: "http", file: "./proxy/2.txt" },
-    { protocol: "socks5", file: "./proxy/3.txt" },
-    { protocol: "socks4", file: "./proxy/4.txt" },
-    { protocol: "http", file: "./proxy/5.txt" },
-    { protocol: "socks5", file: "./proxy/6.txt" },
-    { protocol: "socks4", file: "./proxy/7.txt" },
-    { protocol: "http", file: "./proxy/8.txt" },
-  ];
+    { protocol: 'socks5', file: './proxy/0.txt' },
+    { protocol: 'socks4', file: './proxy/1.txt' },
+    { protocol: 'http', file: './proxy/2.txt' },
+    { protocol: 'socks5', file: './proxy/3.txt' },
+    { protocol: 'socks4', file: './proxy/4.txt' },
+    { protocol: 'http', file: './proxy/5.txt' },
+    { protocol: 'socks5', file: './proxy/6.txt' },
+    { protocol: 'socks4', file: './proxy/7.txt' },
+    { protocol: 'http', file: './proxy/8.txt' }
+  ]
 
-  // await gather(browser);
-  await startJob(browser, sources);
+  await gather(browser);
+  // await startJob(browser, sources);
 })();
