@@ -318,6 +318,6 @@ async function gather(browser) {
     { protocol: 'http', file: './proxy/8.txt' }
   ]
 
-  await gather(browser);
-  // await startJob(browser, sources);
+  // await gather(browser);
+  await startJob(browser, sources);
 })();
